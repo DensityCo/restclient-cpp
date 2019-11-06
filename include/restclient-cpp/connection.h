@@ -187,7 +187,8 @@ class Connection {
     // Basic HTTP verb methods
     RestClient::Response get(const std::string& uri);
     RestClient::Response post(const std::string& uri,
-                              const std::string& data);
+                              const std::string& data,
+                              size_t (*readingCallback)(void*, size_t, size_t, void*) = {});
     RestClient::Response put(const std::string& uri,
                              const std::string& data);
     RestClient::Response patch(const std::string& uri,

@@ -461,15 +461,29 @@ RestClient::Connection::get(const std::string& url) {
  */
 RestClient::Response
 RestClient::Connection::post(const std::string& url,
-                             const std::string& data) {
+                             const std::string& data,
+                             size_t (*readingCallback)(void*, size_t, size_t, void*)) {
+    RestClient::Response ret;
+    ret.code =  CURLE_OK;
   /** Now specify we want to POST data */
   curl_easy_setopt(this->curlHandle, CURLOPT_POST, 1L);
   /** set post fields */
   curl_easy_setopt(this->curlHandle, CURLOPT_POSTFIELDS, data.c_str());
   curl_easy_setopt(this->curlHandle, CURLOPT_POSTFIELDSIZE, data.size());
+  if (readingCallback){
+      auto readingCallbackPtr = static_cast<size_t (*)(void*, size_t, size_t, void*)>(readingCallback);
+      if (readingCallbackPtr){
+          curl_easy_setopt(this->curlHandle, CURLOPT_WRITEFUNCTION, readingCallbackPtr);
+      }
+      else {
+          ret.code =  CURLE_HTTP2_STREAM;
+          ret.body = "Failed to static cast the provided lambda function to C-style callback. Is signature correct?";
+      }
+  }
 
-  return this->performCurlRequest(url);
+  return ret.code == CURLE_OK ? this->performCurlRequest(url) : ret;
 }
+
 /**
  * @brief HTTP PUT method
  *
