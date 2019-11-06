@@ -470,18 +470,48 @@ RestClient::Connection::post(const std::string& url,
   /** set post fields */
   curl_easy_setopt(this->curlHandle, CURLOPT_POSTFIELDS, data.c_str());
   curl_easy_setopt(this->curlHandle, CURLOPT_POSTFIELDSIZE, data.size());
-  if (readingCallback){
-      auto readingCallbackPtr = static_cast<size_t (*)(void*, size_t, size_t, void*)>(readingCallback);
-      if (readingCallbackPtr){
-          curl_easy_setopt(this->curlHandle, CURLOPT_WRITEFUNCTION, readingCallbackPtr);
-      }
-      else {
-          ret.code =  CURLE_HTTP2_STREAM;
-          ret.body = "Failed to static cast the provided lambda function to C-style callback. Is signature correct?";
-      }
-  }
 
-  return ret.code == CURLE_OK ? this->performCurlRequest(url) : ret;
+  return this->performCurlRequest(url);
+}
+
+RestClient::Response RestClient::Connection::stream(const std::string& uri, const std::string& data, size_t (*readingCallback)(void*, size_t, size_t, void*))
+{
+    RestClient::Response ret;
+    ret.code =  CURLE_OK;
+
+    curl_easy_setopt(this->curlHandle, CURLOPT_URL, "http://192.168.12.55:80/appdevent/nbapi/event");
+    curl_easy_setopt(this->curlHandle, CURLOPT_POSTFIELDS, data.c_str());
+
+    std::string headerString;
+    curl_slist* headerList = nullptr;
+    for (HeaderFields::const_iterator it = this->headerFields.begin();
+        it != this->headerFields.end(); ++it) {
+      headerString = it->first;
+      headerString += ": ";
+      headerString += it->second;
+      headerList = curl_slist_append(headerList, headerString.c_str());
+    }
+    curl_easy_setopt(this->curlHandle, CURLOPT_HTTPHEADER,
+        headerList);
+
+    if (readingCallback){
+        auto readingCallbackPtr = static_cast<size_t (*)(void*, size_t, size_t, void*)>(readingCallback);
+        if (readingCallbackPtr){
+            curl_easy_setopt(this->curlHandle, CURLOPT_WRITEFUNCTION, readingCallbackPtr);
+        }
+        else {
+            ret.code =  CURLE_HTTP2_STREAM;
+            ret.body = "Failed to static cast the provided lambda function to C-style callback. Is signature correct?";
+        }
+    }
+
+    auto res = curl_easy_perform(this->curlHandle);
+
+    curl_slist_free_all(headerList);
+    // reset curl handle
+    curl_easy_reset(this->curlHandle);
+
+    return ret;
 }
 
 /**

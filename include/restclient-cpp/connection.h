@@ -189,6 +189,9 @@ class Connection {
     RestClient::Response post(const std::string& uri,
                               const std::string& data,
                               size_t (*readingCallback)(void*, size_t, size_t, void*) = {});
+    RestClient::Response stream(const std::string& uri,
+                              const std::string& data,
+                              size_t (*readingCallback)(void*, size_t, size_t, void*));
     RestClient::Response put(const std::string& uri,
                              const std::string& data);
     RestClient::Response patch(const std::string& uri,
